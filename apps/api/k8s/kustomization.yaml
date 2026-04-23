@@ -8,9 +8,6 @@ resources:
   - service.yaml
   - ingress.yaml
   - networkpolicy.yaml
-  - plausible.yaml
-  - clickhouse.yaml
-  - plausible-db.yaml
 
 labels:
   - pairs:
