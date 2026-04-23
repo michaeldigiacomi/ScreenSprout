@@ -125,7 +125,7 @@ jobs:
 
       - name: Deploy to Kubernetes
         run: |
-          kubectl apply -k apps/api/k8s/ --validate=false
+          kubectl apply -f apps/api/k8s/deployment.yaml -f apps/api/k8s/service.yaml -f apps/api/k8s/ingress.yaml --validate=false -n screensprout
           kubectl set image deployment/screen-sprout-api \
             api=ghcr.io/michaeldigiacomi/screensprout-api:latest \
             -n screensprout
