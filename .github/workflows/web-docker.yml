@@ -1,14 +1,20 @@
-name: Build and Push Docker Image
+name: Build & Push Web Docker Image
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+    paths:
+      - 'apps/web/**'
+      - '.github/workflows/web-docker.yml'
   pull_request:
-    branches: [ main ]
+    branches: [main]
+    paths:
+      - 'apps/web/**'
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: screensprout/website
+  IMAGE_NAME: screensprout/web
 
 jobs:
   build:
@@ -29,7 +35,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Extract metadata
         id: meta
@@ -43,7 +49,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: apps/web
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

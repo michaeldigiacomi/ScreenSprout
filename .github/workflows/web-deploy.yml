@@ -1,8 +1,8 @@
-name: Deploy to K3s
+name: Deploy Web to K3s
 
 on:
   workflow_run:
-    workflows: ["Build and Push Docker Image"]
+    workflows: ["Build & Push Web Docker Image"]
     types:
       - completed
     branches: [main]
@@ -17,8 +17,8 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
-  deploy-api:
-    name: Deploy API to K3s
+  deploy-web:
+    name: Deploy Web to K3s
     runs-on: ubuntu-latest
     if: |
       (github.event_name == 'workflow_dispatch') ||
@@ -55,10 +55,10 @@ jobs:
 
       - name: Update deployment image
         run: |
-          kubectl set image deployment/screen-sprout-api api=${{ env.REGISTRY }}/screensprout/api:${{ steps.get_tag.outputs.tag }} -n screensprout
-          kubectl rollout status deployment/screen-sprout-api -n screensprout --timeout=5m
+          kubectl set image deployment/web web=${{ env.REGISTRY }}/screensprout/web:${{ steps.get_tag.outputs.tag }} -n screensprout
+          kubectl rollout status deployment/web -n screensprout --timeout=5m
 
       - name: Verify deployment
         run: |
-          kubectl get pods -n screensprout -l app=screen-sprout-api
-          kubectl get deployment screen-sprout-api -n screensprout -o wide
+          kubectl get pods -n screensprout -l app=web
+          kubectl get deployment web -n screensprout -o wide

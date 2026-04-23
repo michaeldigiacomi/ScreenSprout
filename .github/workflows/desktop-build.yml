@@ -4,22 +4,23 @@ on:
   push:
     branches: [main, dev]
     paths:
-      - 'ScreenSprout.Watcher/**'
-      - 'ScreenSprout.slnx'
-      - 'NuGet.Config'
-      - '.github/workflows/build-desktop.yml'
+      - 'apps/desktop/**'
+      - '.github/workflows/desktop-build.yml'
   pull_request:
     branches: [main]
     paths:
-      - 'ScreenSprout.Watcher/**'
-      - 'ScreenSprout.slnx'
+      - 'apps/desktop/**'
   workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: apps/desktop
 
 jobs:
   build-windows:
     name: Build Windows Executable
     runs-on: windows-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -64,13 +65,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-x64
-          path: ./publish/**
+          path: apps/desktop/publish/**
           retention-days: 30
 
   build-linux:
     name: Build Linux Executable
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -82,24 +83,27 @@ jobs:
 
       - name: Restore dependencies
         run: dotnet restore ScreenSprout.slnx
+        working-directory: apps/desktop
 
       - name: Build
         run: dotnet build ScreenSprout.slnx --configuration Release --no-restore
+        working-directory: apps/desktop
 
       - name: Publish
         run: dotnet publish ScreenSprout.Watcher/ScreenSprout.Watcher.csproj --configuration Release --self-contained true --runtime linux-x64 --output ./publish
+        working-directory: apps/desktop
 
       - name: Upload Linux executable
         uses: actions/upload-artifact@v4
         with:
           name: linux-x64
-          path: ./publish/**
+          path: apps/desktop/publish/**
           retention-days: 30
 
   test:
     name: Run Tests
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -111,6 +115,8 @@ jobs:
 
       - name: Restore dependencies
         run: dotnet restore ScreenSprout.slnx
+        working-directory: apps/desktop
 
       - name: Run tests
         run: dotnet test ScreenSprout.slnx --no-restore --verbosity normal
+        working-directory: apps/desktop
