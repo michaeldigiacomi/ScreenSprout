@@ -1,0 +1,68 @@
+# Xcode
+#
+# Generic Xcode
+#
+build/
+DerivedData/
+*.pbxuser
+*.mode1vcs.bak
+*.mode1vcs
+*.applepage
+*.applepagebackup
+*.xcuserstate
+*.xcuserdatad
+
+# Xcode 12+
+.swiftpm/xcode/package-resolved
+
+# CocoaPods
+#
+# Pods directory
+Pods/
+#
+# Pods file
+Podfile.lock
+
+# Carthage
+#
+# Carthage folder
+Carthage/Build
+Carthage/Archives
+
+# Swift Package Manager
+#
+# Package.resolved is often committed, but if you want to ignore it:
+# .swiftpm/package-resolved
+
+# macOS
+#
+# FileSystem
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+Thumbs.db
+
+# IDEs
+#
+# IntelliJ
+.idea/
+*.iml
+*.iws
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Logs
+*.log
+
+# Secrets
+#
+# Add any local config or secrets files here
+*.env
+*.env.local
+*.env.development.local
+*.env.test.local
+*.env.production.local

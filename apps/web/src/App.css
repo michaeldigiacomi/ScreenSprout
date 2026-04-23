@@ -1,0 +1,10 @@
+/* App-specific styles - minimal overrides */
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Ensure the card in App doesn't override themed card */
+.card {
+  /* Let index.css handle card styling */
+}

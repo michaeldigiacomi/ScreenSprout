@@ -1,0 +1,53 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: screen-sprout-api
+  namespace: screensprout
+  labels:
+    app: screen-sprout-api
+    tier: backend
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: default-security-headers@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - api.screensprout.digitaladrenalin.net
+      secretName: api-screensprout-tls
+  rules:
+    - host: api.screensprout.digitaladrenalin.net
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: screen-sprout-api
+                port:
+                  number: 3000
+---
+# HTTP to HTTPS redirect
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: screen-sprout-api-redirect
+  namespace: screensprout
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.middlewares: screensprout-redirect-scheme@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: api.screensprout.digitaladrenalin.net
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: screen-sprout-api
+                port:
+                  number: 3000

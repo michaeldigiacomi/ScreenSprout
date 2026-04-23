@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: screensprout
+  labels:
+    app.kubernetes.io/name: screensprout
+    app.kubernetes.io/component: namespace

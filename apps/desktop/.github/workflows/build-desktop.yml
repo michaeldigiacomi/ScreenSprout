@@ -1,0 +1,116 @@
+name: Build Desktop
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'ScreenSprout.Watcher/**'
+      - 'ScreenSprout.slnx'
+      - 'NuGet.Config'
+      - '.github/workflows/build-desktop.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'ScreenSprout.Watcher/**'
+      - 'ScreenSprout.slnx'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Build Windows Executable
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ScreenSprout.slnx
+
+      - name: Build
+        run: dotnet build ScreenSprout.slnx --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish ScreenSprout.Watcher/ScreenSprout.Watcher.csproj --configuration Release --self-contained true --runtime win-x64 --output ./publish
+
+      - name: Create self-signed certificate
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=ScreenSprout" -KeyAlgorithm RSA -KeyLength 2048 -CertStoreLocation "Cert:\CurrentUser\My" -NotAfter (Get-Date).AddYears(5)
+          $pwd = ConvertTo-SecureString -String "${{ secrets.WINDOWS_CERT_PASSWORD }}" -Force -AsPlainText
+          Export-PfxCertificate -Cert $cert -FilePath "codesign.pfx" -Password $pwd
+
+      - name: Sign Windows executable
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $pwd = ConvertTo-SecureString -String "${{ secrets.WINDOWS_CERT_PASSWORD }}" -Force -AsPlainText
+          $cert = Import-PfxCertificate -FilePath "codesign.pfx" -CertStoreLocation "Cert:\CurrentUser\My" -Password $pwd
+          $exePath = Get-ChildItem -Path ./publish -Filter "*.exe" | Select-Object -First 1
+          if ($exePath) {
+            Set-AuthenticodeSignature -FilePath $exePath.FullName -Certificate $cert -TimestampServer "http://timestamp.digicert.com"
+            Write-Host "Signed executable: $($exePath.FullName)"
+          } else {
+            Write-Warning "No .exe file found in ./publish"
+          }
+
+      - name: Upload Windows executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: ./publish/**
+          retention-days: 30
+
+  build-linux:
+    name: Build Linux Executable
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ScreenSprout.slnx
+
+      - name: Build
+        run: dotnet build ScreenSprout.slnx --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish ScreenSprout.Watcher/ScreenSprout.Watcher.csproj --configuration Release --self-contained true --runtime linux-x64 --output ./publish
+
+      - name: Upload Linux executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-x64
+          path: ./publish/**
+          retention-days: 30
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ScreenSprout.slnx
+
+      - name: Run tests
+        run: dotnet test ScreenSprout.slnx --no-restore --verbosity normal

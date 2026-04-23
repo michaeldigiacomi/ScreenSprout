@@ -1,0 +1,153 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (e.g., v1.0.0)'
+        required: true
+        default: 'v0.0.0'
+
+jobs:
+  # Build Desktop Windows
+  build-desktop-windows:
+    name: Build Desktop Windows
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          repository: ScreenSprout/screen-sprout-desktop
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ScreenSprout.slnx
+
+      - name: Build
+        run: dotnet build ScreenSprout.slnx --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish ScreenSprout.Watcher/ScreenSprout.Watcher.csproj --configuration Release --self-contained true --runtime win-x64 --output ./publish
+
+      - name: Create self-signed certificate
+        shell: pwsh
+        run: |
+          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=ScreenSprout" -KeyAlgorithm RSA -KeyLength 2048 -CertStoreLocation "Cert:\CurrentUser\My" -NotAfter (Get-Date).AddYears(5)
+          $pwd = ConvertTo-SecureString -String "${{ secrets.WINDOWS_CERT_PASSWORD }}" -Force -AsPlainText
+          Export-PfxCertificate -Cert $cert -FilePath "codesign.pfx" -Password $pwd
+
+      - name: Sign Windows executable
+        shell: pwsh
+        run: |
+          $pwd = ConvertTo-SecureString -String "${{ secrets.WINDOWS_CERT_PASSWORD }}" -Force -AsPlainText
+          $cert = Import-PfxCertificate -FilePath "codesign.pfx" -CertStoreLocation "Cert:\CurrentUser\My" -Password $pwd
+          $exePath = Get-ChildItem -Path ./publish -Filter "*.exe" | Select-Object -First 1
+          if ($exePath) {
+            Set-AuthenticodeSignature -FilePath $exePath.FullName -Certificate $cert -TimestampServer "http://timestamp.digicert.com"
+            Write-Host "Signed executable: $($exePath.FullName)"
+          } else {
+            Write-Warning "No .exe file found in ./publish"
+          }
+
+      - name: Zip release
+        run: |
+          $version = "${{ github.ref_name }}"
+          if ($version -eq "") { $version = "${{ github.event.inputs.version }}" }
+          Compress-Archive -Path ./publish/* -DestinationPath ./release/screensprout-desktop-windows-${version}.zip
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-windows-release
+          path: release/*.zip
+
+  # Build Desktop Linux
+  build-desktop-linux:
+    name: Build Desktop Linux
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          repository: ScreenSprout/screen-sprout-desktop
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ScreenSprout.slnx
+
+      - name: Build
+        run: dotnet build ScreenSprout.slnx --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish ScreenSprout.Watcher/ScreenSprout.Watcher.csproj --configuration Release --self-contained true --runtime linux-x64 --output ./publish
+
+      - name: Create tar.gz
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          if [ "$VERSION" = "refs/heads/main" ]; then
+            VERSION=${{ github.event.inputs.version }}
+          fi
+          mkdir -p release
+          tar -czf release/screensprout-desktop-linux-${VERSION}.tar.gz -C publish .
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-linux-release
+          path: release/*.tar.gz
+
+  # Create Release
+  create-release:
+    name: Create GitHub Release
+    needs: [build-desktop-windows, build-desktop-linux]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Display structure
+        run: ls -R ./artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            ./artifacts/desktop-windows-release/*.zip
+            ./artifacts/desktop-linux-release/*.tar.gz
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Manual Release
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          name: Release ${{ github.event.inputs.version }}
+          files: |
+            ./artifacts/desktop-windows-release/*.zip
+            ./artifacts/desktop-linux-release/*.tar.gz
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

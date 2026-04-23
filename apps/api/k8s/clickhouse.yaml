@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: plausible-clickhouse
+  namespace: screensprout
+  labels:
+    app: plausible-clickhouse
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: plausible-clickhouse
+  serviceName: plausible-clickhouse
+  template:
+    metadata:
+      labels:
+        app: plausible-clickhouse
+    spec:
+      containers:
+      - name: plausible-clickhouse
+        image: clickhouse/clickhouse-server:24.12-alpine
+        ports:
+        - name: http
+          containerPort: 8123
+        - name: client
+          containerPort: 9000
+        env:
+        - name: CLICKHOUSE_SKIP_USER_SETUP
+          value: "1"
+        volumeMounts:
+        - name: clickhouse-config
+          mountPath: /etc/clickhouse-server/config.d/logging.xml
+          subPath: logging.xml
+      volumes:
+      - name: clickhouse-config
+        configMap:
+          name: clickhouse-config
+  volumeClaimTemplates:
+  - metadata:
+      name: clickhouse-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: plausible-clickhouse
+  namespace: screensprout
+  labels:
+    app: plausible-clickhouse
+spec:
+  ports:
+  - port: 8123
+    targetPort: 8123
+    name: http
+  - port: 9000
+    targetPort: 9000
+    name: client
+  selector:
+    app: plausible-clickhouse
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: clickhouse-config
+  namespace: screensprout
+data:
+  logging.xml: |
+    <clickhouse>
+        <logger>
+            <level>warning</level>
+            <console>1</console>
+        </logger>
+    </clickhouse>

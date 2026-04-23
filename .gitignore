@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+build/
+
+# Environment
+.env
+*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test results
+coverage/
+test-results/
+playwright-report/
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# iOS
+*.xcuserdata
+*.xcworkspace
+DerivedData/
+Pods/
+
+# Generated
+public/health.json

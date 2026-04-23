@@ -1,0 +1,76 @@
+# Ingress Routes for screeensprout.digitaladrenalin.net
+# Replaces Envoy Gateway HTTPRoute resources with standard Kubernetes Ingress
+
+---
+# Website ingress for screeensprout.digitaladrenalin.net
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: screensprout-website
+  namespace: screensprout
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - screeensprout.digitaladrenalin.net
+        - screensprout.digitaladrenalin.net
+      secretName: screensprout-website-tls
+  rules:
+    - host: screeensprout.digitaladrenalin.net
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: website
+                port:
+                  number: 80
+    - host: screensprout.digitaladrenalin.net
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: website
+                port:
+                  number: 80
+
+---
+# App ingress for app.screensprout.digitaladrenalin.net
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: screensprout-app
+  namespace: screensprout
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - app.screensprout.digitaladrenalin.net
+      secretName: screensprout-app-tls
+  rules:
+    - host: app.screensprout.digitaladrenalin.net
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: screen-sprout-api
+                port:
+                  number: 3000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port:
+                  number: 5173
