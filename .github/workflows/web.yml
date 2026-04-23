@@ -129,7 +129,7 @@ jobs:
 
       - name: Deploy to Kubernetes
         run: |
-          kubectl apply -f apps/web/k8s/ --validate=false -n screensprout
+          kubectl apply -k apps/web/k8s/base/ --validate=false
           kubectl set image deployment/web \
             web=ghcr.io/michaeldigiacomi/screensprout-web:latest \
             -n screensprout
