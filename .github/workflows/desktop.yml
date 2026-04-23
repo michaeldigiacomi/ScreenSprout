@@ -40,28 +40,6 @@ jobs:
       - name: Publish
         run: dotnet publish ScreenSprout.Watcher/ScreenSprout.Watcher.csproj --configuration Release --self-contained true --runtime win-x64 --output ./publish
 
-      - name: Create self-signed certificate
-        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
-        shell: pwsh
-        run: |
-          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=ScreenSprout" -KeyAlgorithm RSA -KeyLength 2048 -CertStoreLocation "Cert:\CurrentUser\My" -NotAfter (Get-Date).AddYears(5)
-          $pwd = ConvertTo-SecureString -String "${{ secrets.WINDOWS_CERT_PASSWORD }}" -Force -AsPlainText
-          Export-PfxCertificate -Cert $cert -FilePath "codesign.pfx" -Password $pwd
-
-      - name: Sign Windows executable
-        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
-        shell: pwsh
-        run: |
-          $pwd = ConvertTo-SecureString -String "${{ secrets.WINDOWS_CERT_PASSWORD }}" -Force -AsPlainText
-          $cert = Import-PfxCertificate -FilePath "codesign.pfx" -CertStoreLocation "Cert:\CurrentUser\My" -Password $pwd
-          $exePath = Get-ChildItem -Path ./publish -Filter "*.exe" | Select-Object -First 1
-          if ($exePath) {
-            Set-AuthenticodeSignature -FilePath $exePath.FullName -Certificate $cert -TimestampServer "http://timestamp.digicert.com"
-            Write-Host "Signed executable: $($exePath.FullName)"
-          } else {
-            Write-Warning "No .exe file found in ./publish"
-          }
-
       - name: Upload Windows executable
         uses: actions/upload-artifact@v4
         with:
