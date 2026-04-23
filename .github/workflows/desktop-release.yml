@@ -104,7 +104,6 @@ jobs:
           fi
           mkdir -p release
           tar -czf release/screensprout-desktop-linux-${VERSION}.tar.gz -C apps/desktop/publish .
-        working-directory: .
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4

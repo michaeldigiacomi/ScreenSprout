@@ -5,11 +5,12 @@ on:
     branches: [main, dev]
     paths:
       - 'apps/desktop/**'
-      - '.github/workflows/desktop-build.yml'
+      - '.github/workflows/desktop.yml'
   pull_request:
     branches: [main]
     paths:
       - 'apps/desktop/**'
+      - '.github/workflows/desktop.yml'
   workflow_dispatch:
 
 defaults:
